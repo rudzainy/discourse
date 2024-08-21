@@ -238,7 +238,7 @@ class TopicTrackingState
   end
 
   def self.new_filter_sql
-    connection.to_sql(
+    ActiveRecord::Base.connection.to_sql(
       TopicQuery
         .new_filter(Topic, treat_as_new_topic_clause_sql: treat_as_new_topic_clause)
         .where_clause
@@ -247,11 +247,13 @@ class TopicTrackingState
   end
 
   def self.unread_filter_sql(whisperer: false)
-    connection.to_sql(TopicQuery.unread_filter(Topic, whisperer: whisperer).where_clause.ast)
+    ActiveRecord::Base.connection.to_sql(
+      TopicQuery.unread_filter(Topic, whisperer: whisperer).where_clause.ast,
+    )
   end
 
   def self.treat_as_new_topic_clause
-    connection.to_sql(
+    ActiveRecord::Base.connection.to_sql(
       User
         .where(
           "GREATEST(CASE
