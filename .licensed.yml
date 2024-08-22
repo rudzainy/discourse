@@ -68,6 +68,7 @@ reviewed:
     - r2 # Apache-2.0 (Twitter)
     - raindrops # LGPL-2.1+
     - rubyzip # Ruby
+    - securerandom # Ruby
     - sidekiq # LGPL (Sidekiq)
     - tilt # MIT
     - unf # BSD-2-Clause
