@@ -18,7 +18,7 @@ module Service
 
     # Simple structure to hold the context of the service during its whole lifecycle.
     class Context
-      delegate :slice, to: :store
+      delegate :slice, :dig, to: :store
 
       def initialize(context = {})
         @store = context.symbolize_keys
@@ -196,7 +196,8 @@ module Service
         attributes = class_name.attribute_names.map(&:to_sym)
         default_values = {}
         default_values = context[default_values_from].slice(*attributes) if default_values_from
-        contract = class_name.new(default_values.merge(context.slice(*attributes)))
+        params_key = default? ? :params : [:params, name.to_sym]
+        contract = class_name.new(default_values.merge(context.dig(*params_key).slice(*attributes)))
         context[contract_name] = contract
         context[result_key] = Context.build
         if contract.invalid?
@@ -208,8 +209,12 @@ module Service
       private
 
       def contract_name
-        return :contract if name.to_sym == :default
+        return :contract if default?
         :"#{name}_contract"
+      end
+
+      def default?
+        name.to_sym == :default
       end
     end
 

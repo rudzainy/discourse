@@ -31,13 +31,6 @@ module Chat
       attribute :staged_id, :string
       attribute :upload_ids, :array
       attribute :thread_id, :string
-      attribute :streaming, :boolean, default: false
-      attribute :enforce_membership, :boolean, default: false
-      attribute :incoming_chat_webhook
-      attribute :process_inline, :boolean, default: Rails.env.test?
-      attribute :force_thread, :boolean, default: false
-      attribute :strip_whitespaces, :boolean, default: true
-      attribute :created_by_sdk, :boolean, default: false
 
       validates :chat_channel_id, presence: true
       validates :message, presence: true, if: -> { upload_ids.blank? }
@@ -79,8 +72,8 @@ module Chat
       Chat::Channel.find_by_id_or_slug(contract.chat_channel_id)
     end
 
-    def enforce_membership(guardian:, channel:, contract:)
-      if guardian.user.bot? || contract.enforce_membership
+    def enforce_membership(guardian:, channel:)
+      if guardian.user.bot? || context[:enforce_membership]
         channel.add(guardian.user)
 
         if channel.direct_message_channel?
@@ -110,7 +103,7 @@ module Chat
           original_message: reply,
           original_message_user: reply.user,
           channel: channel,
-          force: contract.force_thread,
+          force: context[:force_thread].present?,
         )
     end
 
@@ -130,10 +123,12 @@ module Chat
     end
 
     def clean_message(contract:)
+      # TODO: find something better
+      context[:strip_whitespaces] = true if context[:strip_whitespaces].nil?
       contract.message =
         TextCleaner.clean(
           contract.message,
-          strip_whitespaces: contract.strip_whitespaces,
+          strip_whitespaces: context[:strip_whitespaces],
           strip_zero_width_spaces: true,
         )
     end
@@ -148,7 +143,7 @@ module Chat
         thread: thread,
         cooked: ::Chat::Message.cook(contract.message, user_id: guardian.user.id),
         cooked_version: ::Chat::Message::BAKED_VERSION,
-        streaming: contract.streaming,
+        streaming: context[:streaming].present?,
       )
     end
 
@@ -169,10 +164,10 @@ module Chat
       thread.add(thread.original_message_user)
     end
 
-    def create_webhook_event(contract:, message_instance:)
-      return if contract.incoming_chat_webhook.blank?
+    def create_webhook_event(message_instance:)
+      return if context[:incoming_chat_webhook].blank?
       message_instance.create_chat_webhook_event(
-        incoming_chat_webhook: contract.incoming_chat_webhook,
+        incoming_chat_webhook: context[:incoming_chat_webhook],
       )
     end
 
@@ -186,8 +181,8 @@ module Chat
       membership.update!(last_read_message: message_instance)
     end
 
-    def update_created_by_sdk(message_instance:, contract:)
-      message_instance.created_by_sdk = contract.created_by_sdk
+    def update_created_by_sdk(message_instance:)
+      message_instance.created_by_sdk = context[:created_by_sdk].present?
     end
 
     def process_direct_message_channel(membership:)
@@ -218,7 +213,9 @@ module Chat
         },
       )
 
-      if contract.process_inline
+      # TODO: find something better
+      context[:process_inline] = Rails.env.test? if context[:process_inline].nil?
+      if context[:process_inline]
         Jobs::Chat::ProcessMessage.new.execute(
           { chat_message_id: message_instance.id, staged_id: contract.staged_id },
         )

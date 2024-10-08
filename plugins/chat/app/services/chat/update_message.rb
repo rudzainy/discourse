@@ -19,9 +19,6 @@ module Chat
       attribute :message_id, :string
       attribute :message, :string
       attribute :upload_ids, :array
-      attribute :streaming, :boolean, default: false
-      attribute :strip_whitespaces, :boolean, default: true
-      attribute :process_inline, :boolean, default: Rails.env.test?
 
       validates :message_id, presence: true
       validates :message, presence: true, if: -> { upload_ids.blank? }
@@ -83,10 +80,12 @@ module Chat
     end
 
     def clean_message(contract:)
+      # TODO: find something better
+      context[:strip_whitespaces] = true if context[:strip_whitespaces].nil?
       contract.message =
         TextCleaner.clean(
           contract.message,
-          strip_whitespaces: contract.strip_whitespaces,
+          strip_whitespaces: context[:strip_whitespaces],
           strip_zero_width_spaces: true,
         )
     end
@@ -156,7 +155,9 @@ module Chat
 
       DiscourseEvent.trigger(:chat_message_edited, message, message.chat_channel, message.user)
 
-      if contract.process_inline
+      # TODO: find something better
+      context[:process_inline] = Rails.env.test? if context[:process_inline].nil?
+      if context[:process_inline]
         Jobs::Chat::ProcessMessage.new.execute(
           { chat_message_id: message.id, edit_timestamp: edit_timestamp },
         )
