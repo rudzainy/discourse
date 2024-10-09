@@ -18,7 +18,7 @@ module Service
 
     # Simple structure to hold the context of the service during its whole lifecycle.
     class Context
-      delegate :slice, :dig, to: :store
+      delegate :slice, :dig, :keys, to: :store
 
       def initialize(context = {})
         @store = context.symbolize_keys
@@ -35,6 +35,7 @@ module Service
       def to_h
         store.dup
       end
+      alias to_hash to_h
 
       # @return [Boolean] returns +true+ if the context is set as successful (default)
       def success?
@@ -114,6 +115,12 @@ module Service
 
       def transaction(&block)
         steps << TransactionStep.new(&block)
+      end
+
+      def dependencies(&block)
+        dependencies_class = Class.new(DependenciesDefinition).tap { _1.class_eval(&block) }
+        const_set("Dependencies", dependencies_class)
+        steps << DependenciesStep.new(:default, class_name: dependencies_class)
       end
     end
 
@@ -231,6 +238,44 @@ module Service
 
       def call(instance, context)
         ActiveRecord::Base.transaction { steps.each { |step| step.call(instance, context) } }
+      end
+    end
+
+    # @!visibility private
+    class DependenciesStep < Step
+      def call(instance, context)
+        context[result_key] = Context.build
+        missing_dependencies = class_name.required_attributes - context.keys
+        if missing_dependencies.present?
+          raise "Some required dependencies are missing: #{missing_dependencies.join(", ")}. Maybe you forgot to provide them to the service?"
+        end
+        class_name.new(**context).attributes.each { |key, value| context[key] = value }
+      end
+    end
+
+    class DependenciesDefinition
+      extend Dry::Initializer
+
+      class << self
+        def required(name)
+          option(name)
+        end
+
+        def optional(name, default: nil)
+          opts = { optional: true }
+          if !default.nil?
+            opts.merge!(default: default.respond_to?(:call) ? default : -> { default })
+          end
+          option(name, **opts)
+        end
+
+        def required_attributes
+          dry_initializer.options.filter_map { _1.target if !_1.optional }
+        end
+      end
+
+      def attributes
+        self.class.dry_initializer.public_attributes(self)
       end
     end
 

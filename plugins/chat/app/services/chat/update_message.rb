@@ -15,6 +15,12 @@ module Chat
     #   @param message [String]
     #   @param upload_ids [Array<Integer>] IDs of uploaded documents
 
+    dependencies do
+      required :guardian
+
+      optional :strip_whitespaces, default: true
+      optional :process_inline, default: -> { Rails.env.test? }
+    end
     contract do
       attribute :message_id, :string
       attribute :message, :string
@@ -79,15 +85,9 @@ module Chat
       guardian.can_edit_chat?(message)
     end
 
-    def clean_message(contract:)
-      # TODO: find something better
-      context[:strip_whitespaces] = true if context[:strip_whitespaces].nil?
+    def clean_message(contract:, strip_whitespaces:)
       contract.message =
-        TextCleaner.clean(
-          contract.message,
-          strip_whitespaces: context[:strip_whitespaces],
-          strip_zero_width_spaces: true,
-        )
+        TextCleaner.clean(contract.message, strip_zero_width_spaces: true, strip_whitespaces:)
     end
 
     def modify_message(contract:, message:, guardian:, uploads:)
@@ -148,16 +148,14 @@ module Chat
       chars_edited > max_edited_chars
     end
 
-    def publish(message:, guardian:, contract:)
+    def publish(message:, guardian:, contract:, process_inline:)
       edit_timestamp = context[:revision]&.created_at&.iso8601(6) || Time.zone.now.iso8601(6)
 
       ::Chat::Publisher.publish_edit!(message.chat_channel, message)
 
       DiscourseEvent.trigger(:chat_message_edited, message, message.chat_channel, message.user)
 
-      # TODO: find something better
-      context[:process_inline] = Rails.env.test? if context[:process_inline].nil?
-      if context[:process_inline]
+      if process_inline
         Jobs::Chat::ProcessMessage.new.execute(
           { chat_message_id: message.id, edit_timestamp: edit_timestamp },
         )
