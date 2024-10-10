@@ -101,9 +101,11 @@ Fabricator(:chat_message_with_service, class_name: "Chat::CreateMessage") do
           in_reply_to_id: transients[:in_reply_to]&.id,
           upload_ids: transients[:upload_ids],
         },
+        options: {
+          process_inline: true,
+        },
         guardian: user.guardian,
         incoming_chat_webhook: transients[:incoming_chat_webhook],
-        process_inline: true,
       )
 
     if result.failure?

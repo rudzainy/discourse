@@ -20,7 +20,7 @@ RSpec.describe Chat::CreateMessage do
   end
 
   describe ".call" do
-    subject(:result) { described_class.call(params: params, **dependencies) }
+    subject(:result) { described_class.call(params:, options:, **dependencies) }
 
     fab!(:user)
     fab!(:other_user) { Fabricate(:user) }
@@ -42,7 +42,8 @@ RSpec.describe Chat::CreateMessage do
         context_post_ids: context_post_ids,
       }
     end
-    let(:dependencies) { { guardian: guardian, enforce_membership: false, force_thread: false } }
+    let(:options) { { enforce_membership: false, force_thread: false } }
+    let(:dependencies) { { guardian: } }
     let(:message) { result[:message_instance].reload }
 
     before { channel.add(guardian.user) }
@@ -73,7 +74,7 @@ RSpec.describe Chat::CreateMessage do
 
       context "when strip_whitespace is disabled" do
         before do
-          dependencies[:strip_whitespaces] = false
+          options[:strip_whitespaces] = false
           params[:message] = "aaaaaaa\n"
         end
 
@@ -106,7 +107,7 @@ RSpec.describe Chat::CreateMessage do
       end
 
       context "when process_inline is false" do
-        before { dependencies[:process_inline] = false }
+        before { options[:process_inline] = false }
 
         it "enqueues a job to process message" do
           expect_enqueued_with(job: Jobs::Chat::ProcessMessage) { result }
@@ -114,7 +115,7 @@ RSpec.describe Chat::CreateMessage do
       end
 
       context "when process_inline is true" do
-        before { dependencies[:process_inline] = true }
+        before { options[:process_inline] = true }
 
         it "processes a message inline" do
           Jobs::Chat::ProcessMessage.any_instance.expects(:execute).once
@@ -252,7 +253,7 @@ RSpec.describe Chat::CreateMessage do
 
             before do
               SiteSetting.chat_allowed_groups = [Group::AUTO_GROUPS[:everyone]]
-              dependencies[:enforce_membership] = true
+              options[:enforce_membership] = true
             end
 
             it { is_expected.to run_successfully }
@@ -352,7 +353,7 @@ RSpec.describe Chat::CreateMessage do
                         end
 
                         context "when thread is forced" do
-                          before { dependencies[:force_thread] = true }
+                          before { options[:force_thread] = true }
 
                           it "publishes the new thread" do
                             Chat::Publisher.expects(:publish_thread_created!).with(

@@ -128,7 +128,9 @@ RSpec.describe Chat::UpdateMessage do
 
         described_class.call(
           guardian: guardian,
-          strip_whitespaces: false,
+          options: {
+            strip_whitespaces: false,
+          },
           params: {
             message_id: chat_message.id,
             message: new_message,
@@ -920,7 +922,7 @@ RSpec.describe Chat::UpdateMessage do
   end
 
   describe ".call" do
-    subject(:result) { described_class.call(params: params, **dependencies) }
+    subject(:result) { described_class.call(params:, options:, **dependencies) }
 
     fab!(:current_user) { Fabricate(:user) }
     fab!(:channel_1) { Fabricate(:chat_channel) }
@@ -941,6 +943,7 @@ RSpec.describe Chat::UpdateMessage do
     let(:upload_ids) { [upload_1.id] }
     let(:params) { { message_id: message_id, message: message, upload_ids: upload_ids } }
     let(:dependencies) { { guardian: guardian } }
+    let(:options) { {} }
 
     before do
       SiteSetting.chat_editing_grace_period = 30
@@ -977,12 +980,12 @@ RSpec.describe Chat::UpdateMessage do
       end
 
       it "can enqueue a job to process message" do
-        dependencies[:process_inline] = false
+        options[:process_inline] = false
         expect_enqueued_with(job: Jobs::Chat::ProcessMessage) { result }
       end
 
       it "can process a message inline" do
-        dependencies[:process_inline] = true
+        options[:process_inline] = true
         Jobs::Chat::ProcessMessage.any_instance.expects(:execute).once
         expect_not_enqueued_with(job: Jobs::Chat::ProcessMessage) { result }
       end

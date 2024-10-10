@@ -123,16 +123,18 @@ module ChatSDK
           params: {
             message: raw,
             chat_channel_id: channel_id,
-            in_reply_to_id: in_reply_to_id,
-            thread_id: thread_id,
-            upload_ids: upload_ids,
+            in_reply_to_id:,
+            thread_id:,
+            upload_ids:,
           },
-          guardian: guardian,
-          streaming: streaming,
-          enforce_membership: enforce_membership,
-          force_thread: force_thread,
-          strip_whitespaces: strip_whitespaces,
-          created_by_sdk: true,
+          options: {
+            created_by_sdk: true,
+            streaming:,
+            enforce_membership:,
+            force_thread:,
+            strip_whitespaces:,
+          },
+          guardian:,
         ) do
           on_model_not_found(:channel) { raise "Couldn't find channel with id: `#{channel_id}`" }
           on_model_not_found(:membership) do
