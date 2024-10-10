@@ -1,10 +1,12 @@
 # frozen_string_literal: true
 
 RSpec.describe(Flags::ReorderFlag) do
-  subject(:result) do
-    described_class.call(flag_id: flag.id, guardian: current_user.guardian, direction: direction)
-  end
+  subject(:result) { described_class.call(params:, **dependencies) }
 
+  fab!(:current_user) { Fabricate(:admin) }
+
+  let(:params) { { flag_id: flag.id, direction: } }
+  let(:dependencies) { { guardian: current_user.guardian } }
   let(:flag) { Flag.order(:position).last }
   let(:direction) { "up" }
 
@@ -15,26 +17,18 @@ RSpec.describe(Flags::ReorderFlag) do
   end
 
   context "when direction is invalid" do
-    fab!(:current_user) { Fabricate(:admin) }
     let(:direction) { "side" }
 
     it { is_expected.to fail_a_contract }
   end
 
   context "when move is invalid" do
-    fab!(:current_user) { Fabricate(:admin) }
     let(:direction) { "down" }
 
     it { is_expected.to fail_a_policy(:invalid_move) }
   end
 
   context "when user is allowed to perform the action" do
-    fab!(:current_user) { Fabricate(:admin) }
-
-    after do
-      described_class.call(flag_id: flag.id, guardian: current_user.guardian, direction: "down")
-    end
-
     it { is_expected.to run_successfully }
 
     it "moves the flag" do

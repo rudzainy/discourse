@@ -1,8 +1,10 @@
 # frozen_string_literal: true
 
 RSpec.describe(Flags::ToggleFlag) do
-  subject(:result) { described_class.call(flag_id: flag.id, guardian: current_user.guardian) }
+  subject(:result) { described_class.call(params:, **dependencies) }
 
+  let(:params) { { flag_id: flag.id } }
+  let(:dependencies) { { guardian: current_user.guardian } }
   let(:flag) { Flag.system.last }
 
   context "when user is not allowed to perform the action" do

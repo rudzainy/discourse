@@ -17,8 +17,8 @@ class Flags::ToggleFlag
 
   private
 
-  def fetch_flag(flag_id:)
-    Flag.find(flag_id)
+  def fetch_flag(contract:)
+    Flag.find_by(id: contract.flag_id)
   end
 
   def invalid_access(guardian:)

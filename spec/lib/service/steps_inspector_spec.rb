@@ -21,7 +21,7 @@ RSpec.describe Service::StepsInspector do
   subject(:inspector) { described_class.new(result) }
 
   let(:parameter) { "present" }
-  let(:result) { DummyService.call(parameter: parameter) }
+  let(:result) { DummyService.call(params: { parameter: parameter }) }
 
   before do
     class DummyService
