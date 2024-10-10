@@ -1,0 +1,10 @@
+# $schema: ./json_schemas/intermediate_db.json
+
+output_file_path: "db/intermediate_db_schema/100-base-schema.sql"
+
+columns:
+  add:
+  rename:
+    - from: "id"
+      to: ""
+
