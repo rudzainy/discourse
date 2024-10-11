@@ -26,6 +26,16 @@ tables:
   posts:
 
 virtual_tables:
+  uploads:
+    columns:
+      - name: "id"
+        type: "text"
+        primary_key: true
+        nullable: false
+      - name: "display_filename"
+        type: "text"
+        nullable: false
+
 
 ignored_tables:
   - admin_notices
