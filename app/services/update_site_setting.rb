@@ -4,7 +4,7 @@ class UpdateSiteSetting
   include Service::Base
 
   options do
-    # to have syntax tree leave this as a block
+    # useless comment for syntax tree
     attribute :allow_changing_hidden, :boolean, default: false
   end
 
