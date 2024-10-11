@@ -23,5 +23,13 @@ module Chat
     def generate_auto_slug
       self.slug.blank?
     end
+
+    def leave(user)
+      return remove(user) unless direct_message&.group
+      transaction do
+        membership_for(user)&.destroy!
+        direct_message.direct_message_users.where(user: user).destroy_all
+      end
+    end
   end
 end
