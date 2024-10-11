@@ -3,6 +3,7 @@
 class Flags::CreateFlag
   include Service::Base
 
+  policy :invalid_access
   contract do
     attribute :name, :string
     attribute :description, :string
@@ -16,7 +17,6 @@ class Flags::CreateFlag
     validates :description, length: { maximum: Flag::MAX_DESCRIPTION_LENGTH }
     validates :applies_to, inclusion: { in: -> { Flag.valid_applies_to_types } }, allow_nil: false
   end
-  policy :invalid_access
   policy :unique_name
   model :flag, :instantiate_flag
   transaction do

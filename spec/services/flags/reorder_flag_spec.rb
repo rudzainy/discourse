@@ -23,45 +23,39 @@ RSpec.describe(Flags::ReorderFlag) do
       it { is_expected.to fail_a_contract }
     end
 
-    context "when contract is valid" do
-      context "when model is not found" do
-        let(:flag_id) { 0 }
+    context "when model is not found" do
+      let(:flag_id) { 0 }
 
-        it { is_expected.to fail_to_find_a_model(:flag) }
+      it { is_expected.to fail_to_find_a_model(:flag) }
+    end
+
+    context "when user is not allowed to perform the action" do
+      fab!(:current_user) { Fabricate(:user) }
+
+      it { is_expected.to fail_a_policy(:invalid_access) }
+    end
+
+    context "when move is invalid" do
+      let(:direction) { "down" }
+
+      it { is_expected.to fail_a_policy(:invalid_move) }
+    end
+
+    context "when everything's ok" do
+      it { is_expected.to run_successfully }
+
+      it "moves the flag" do
+        expect { result }.to change { Flag.order(:position).map(&:name) }.from(
+          %w[notify_user off_topic inappropriate spam illegal notify_moderators],
+        ).to(%w[notify_user off_topic inappropriate spam notify_moderators illegal])
       end
 
-      context "when model exists" do
-        context "when user is not allowed to perform the action" do
-          fab!(:current_user) { Fabricate(:user) }
-
-          it { is_expected.to fail_a_policy(:invalid_access) }
-        end
-
-        context "when user is allowed to perform the action" do
-          context "when move is invalid" do
-            let(:direction) { "down" }
-
-            it { is_expected.to fail_a_policy(:invalid_move) }
-          end
-
-          context "when move is valid" do
-            it { is_expected.to run_successfully }
-
-            it "moves the flag" do
-              expect { result }.to change { Flag.order(:position).map(&:name) }.from(
-                %w[notify_user off_topic inappropriate spam illegal notify_moderators],
-              ).to(%w[notify_user off_topic inappropriate spam notify_moderators illegal])
-            end
-
-            it "logs the action" do
-              expect { result }.to change { UserHistory.count }.by(1)
-              expect(UserHistory.last).to have_attributes(
-                custom_type: "move_flag",
-                details: "flag: #{result[:flag].name}\ndirection: up",
-              )
-            end
-          end
-        end
+      it "logs the action" do
+        expect { result }.to change { UserHistory.count }.by(1)
+        expect(UserHistory.last).to have_attributes(
+          custom_type: "move_flag",
+          details: "flag: #{result[:flag].name}\ndirection: up",
+        )
       end
     end
   end
